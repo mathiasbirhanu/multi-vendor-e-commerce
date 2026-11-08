@@ -1,0 +1,15 @@
+{
+  "name": "MarketHub.et — Ethiopia's Marketplace",
+  "short_name": "MarketHub",
+  "description": "Shop verified Ethiopian vendors and the MarketHub first-party store. 15% VAT, zone delivery, 7-day returns.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f766e",
+  "orientation": "portrait",
+  "categories": ["shopping"],
+  "icons": [
+    { "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
