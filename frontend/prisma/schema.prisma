@@ -1,0 +1,548 @@
+// MarketHub preview data model (SQLite).
+// NOTE: This mirrors the .NET/PostgreSQL production schema for sandbox preview only.
+// Money is Float here; the real backend uses decimal(18,2) in PostgreSQL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  phone         String?
+  password      String
+  fullName      String
+  role          String // Buyer | Vendor | Admin
+  adminRole     String? // SuperAdmin | Support | Finance | Moderator — Admin-only
+  lang          String         @default("en") // en | am
+  status        String         @default("Active") // Active | Suspended
+  vendorProfile VendorProfile?
+  documents     Document[]
+  reviews       Review[]
+  addresses     Address[]
+  stockReservations StockReservation[]
+  wishlistItems WishlistItem[]
+  carts         Cart[]
+  returnsAsBuyer  ReturnRequest[] @relation("BuyerReturns")
+  returnsAsVendor ReturnRequest[] @relation("VendorReturns")
+  outboundMessages OutboundMessage[]
+  createdAt     DateTime       @default(now())
+}
+
+model VendorProfile {
+  id              String   @id // == userId
+  businessName    String
+  tin             String
+  status          String   @default("PendingReview") // PendingReview | UnderReview | Approved | Rejected | Suspended
+  region          String?
+  city            String?
+  description     String?
+  rejectionReason String?
+  reviewedAt      DateTime?
+  ratingAvg       Float    @default(4.6)
+  ratingCount     Int      @default(0)
+  createdAt       DateTime @default(now())
+  owner           User     @relation(fields: [id], references: [id])
+  products        Product[]
+}
+
+model DocumentType {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  name        String
+  appliesTo   String // Buyer | Vendor
+  isRequired  Boolean    @default(false)
+  minFiles    Int        @default(0)
+  maxFiles    Int        @default(3)
+  description String?
+  sortOrder   Int        @default(0)
+  documents   Document[]
+}
+
+model Document {
+  id              String       @id @default(cuid())
+  ownerId         String
+  typeId          String
+  fileName        String
+  contentType     String
+  sizeBytes       Int          @default(0)
+  status          String       @default("Pending") // Pending | Verified | Rejected | Expired
+  rejectionReason String?
+  expiresAt       DateTime?
+  verifiedAt      DateTime?
+  uploadedAt      DateTime     @default(now())
+  owner           User         @relation(fields: [ownerId], references: [id])
+  type            DocumentType @relation(fields: [typeId], references: [id])
+}
+
+model Policy {
+  id              String   @id @default(cuid())
+  key             String // TermsOfService | RulesAndRegulations | ReturnAndRefundPolicy
+  version         String
+  contentMarkdown String
+  effectiveFrom   DateTime @default(now())
+  isActive        Boolean  @default(true)
+
+  @@unique([key, version])
+}
+
+model Consent {
+  id            String   @id @default(cuid())
+  userId        String
+  policyKey     String
+  policyVersion String
+  acceptedAt    DateTime @default(now())
+  ipAddress     String?
+
+  @@unique([userId, policyKey, policyVersion])
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  sortOrder Int        @default(0)
+  isActive  Boolean    @default(true)
+  products  Product[]
+}
+
+model Product {
+  id                String        @id @default(cuid())
+  vendorId          String? // null = platform (first-party) product
+  vendorName        String? // snapshot
+  categoryId        String
+  title             String
+  slug              String        @unique
+  description       String
+  priceETB          Float
+  compareAtPriceETB Float?
+  salePriceETB      Float? // flash-sale price
+  saleEndsAt        DateTime?
+  stock             Int           @default(0) // denormalized total = Σ variants (or color/own stock)
+  soldCount         Int           @default(0)
+  viewCount         Int           @default(0)
+  sku               String?
+  weightKg          Float         @default(1)
+  status            String        @default("Active") // Draft | PendingReview | Active | Rejected | Archived
+  moderationNote    String?
+  isFeatured        Boolean       @default(false)
+  ratingAvg         Float         @default(4.5)
+  ratingCount       Int           @default(0)
+  images            String? // legacy gradient spec — fallback when gallery URLs fail
+  createdAt         DateTime      @default(now())
+  vendor            VendorProfile? @relation(fields: [vendorId], references: [id])
+  category          Category      @relation(fields: [categoryId], references: [id])
+  cartItems         CartItem[]
+  orderItems        OrderItem[]
+  colors            ProductColor[]
+  gallery           ProductImage[]
+  variants          ProductVariant[]
+  reviews           Review[]
+  stockReservations StockReservation[]
+  wishlistItems     WishlistItem[]
+
+  @@index([categoryId, status])
+  @@index([vendorId])
+  @@index([saleEndsAt])
+}
+
+// Color variant of a product — carries its own stock, optional price delta and image set.
+model ProductColor {
+  id            String           @id @default(cuid())
+  productId     String
+  name          String // "Midnight Black"
+  hex           String // "#1a1a1a" swatch
+  stock         Int              @default(0)
+  extraPriceETB Float            @default(0)
+  sortOrder     Int              @default(0)
+  product       Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images        ProductImage[]
+  cartItems     CartItem[]
+  variants      ProductVariant[]
+  orderItems    OrderItem[]
+  reservations  StockReservation[]
+
+  @@index([productId])
+}
+
+// Product photo. colorId == null → shared/default shot; else it belongs to that color variant.
+// alt is the angle/direction label shown on thumbnails ("Front", "Back", "Side"…).
+model ProductImage {
+  id        String        @id @default(cuid())
+  productId String
+  colorId   String?
+  url       String // https URL (seed) or data URL (vendor upload)
+  alt       String        @default("")
+  sortOrder Int           @default(0)
+  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color     ProductColor? @relation(fields: [colorId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+}
+
+model DeliveryZone {
+  id            String @id @default(cuid())
+  name          String @unique
+  baseFeeETB    Float
+  perKgSurcharge Float @default(0)
+  freeThreshold Float  @default(0)
+}
+
+model CartItem {
+  id        String          @id @default(cuid())
+  userId    String
+  productId String
+  colorId   String? // chosen color variant, null = single-color product
+  variantId String? // SKU-level variant — takes precedence over color when present
+  quantity  Int             @default(1)
+  product   Product         @relation(fields: [productId], references: [id])
+  color     ProductColor?   @relation(fields: [colorId], references: [id], onDelete: Cascade)
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([userId, productId])
+  @@index([variantId])
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  number            String      @unique
+  buyerId           String
+  status            String // Placed | PaymentConfirmed | VendorAccepted | Shipped | Delivered | Completed | Cancelled | RefundRequested | Refunded | Disputed
+  previousStatus    String?
+  addressId         String?
+  addressLine       String
+  city              String
+  zoneId            String
+  zoneName          String
+  phone             String
+  trackingCode      String? // "MH-TRK-XXXXXX"
+  deliveryPin       String? // 4 digits, shared with the buyer after payment
+  couponCode        String?
+  couponDiscountETB Float       @default(0)
+  subtotalETB       Float
+  deliveryFeeETB    Float
+  vatRate           Float       @default(15)
+  vatETB            Float
+  grandTotalETB     Float
+  refundReason      String?
+  deliveredAt       DateTime?
+  createdAt         DateTime    @default(now())
+  address           Address?    @relation(fields: [addressId], references: [id])
+  items             OrderItem[]
+  payments          Payment[]
+  events            OrderEvent[]
+  returns           ReturnRequest[]
+
+  @@index([buyerId, status])
+  @@index([addressId])
+}
+
+model OrderItem {
+  id               String           @id @default(cuid())
+  orderId          String
+  productId        String
+  variantId        String?
+  variantSku       String?
+  variantLabel     String? // "Black / 42"
+  colorId          String?
+  titleSnapshot    String
+  colorName        String?
+  colorHex         String?
+  vendorId         String?
+  vendorName       String?
+  unitPriceETB     Float
+  quantity         Int
+  lineNetETB       Float
+  vatETB           Float
+  commissionRate   Float
+  commissionETB    Float
+  deliveryAllocETB Float
+  refundStatus     String           @default("None") // None | Requested | Approved | Rejected
+  order            Order            @relation(fields: [orderId], references: [id])
+  product          Product          @relation(fields: [productId], references: [id])
+  variant          ProductVariant?  @relation(fields: [variantId], references: [id])
+  color            ProductColor?    @relation(fields: [colorId], references: [id])
+  returns          ReturnRequest[]
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([vendorId])
+  @@index([variantId])
+}
+
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  status    String
+  note      String?
+  byRole    String   @default("System") // System | Buyer | Vendor | Admin | Courier
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  orderId     String
+  provider    String   @default("Mock") // Mock | Chapa | Telebirr | Santimpay
+  providerRef String   @unique
+  amountETB   Float
+  status      String   @default("Initiated") // Initiated | Processing | Confirmed | Failed | Refunded
+  createdAt   DateTime @default(now())
+  order       Order    @relation(fields: [orderId], references: [id])
+}
+
+model PayoutRequest {
+  id                String    @id @default(cuid())
+  vendorId          String
+  amountETB         Float
+  status            String    @default("Requested") // Requested | Processing | Paid | Rejected
+  requestedAt       DateTime  @default(now())
+  dueBy             DateTime // 12h SLA
+  processedAt       DateTime?
+  processedBy       String?
+  paymentMethod     String    @default("Telebirr") // Telebirr | BankTransfer
+  destinationAccount String?
+  adminNote         String?
+}
+
+model LedgerEntry {
+  id          String   @id @default(cuid())
+  accountCode String // 1000 Cash | 2000 VendorPayable | 2100 VatPayable | 3000 PlatformCommission | 3100 DeliveryRevenue | 4000 RefundExpense
+  orderId     String?
+  vendorId    String?
+  debitETB    Float    @default(0)
+  creditETB   Float    @default(0)
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([accountCode, createdAt])
+}
+
+model Settings {
+  key         String  @id
+  value       String
+  description String?
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  channel   String    @default("InApp") // InApp | Email | Sms
+  type      String
+  subject   String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ---------------- Gap-fill models (GAP_PLAN section A) ----------------
+
+model Review {
+  id              String    @id @default(cuid())
+  productId       String
+  userId          String
+  orderId         String? // set → verified-purchase review
+  rating          Int // 1..5
+  title           String?
+  body            String
+  imageUrls       String? // JSON string[]
+  status          String    @default("Pending") // Pending | Approved | Rejected
+  vendorReply     String?
+  vendorRepliedAt DateTime?
+  createdAt       DateTime  @default(now())
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([productId, status])
+  @@index([userId])
+  @@index([status, createdAt])
+}
+
+model ProductVariant {
+  id         String             @id @default(cuid())
+  productId  String
+  sku        String             @unique
+  colorId    String?
+  size       String? // "M" | "128GB" | …
+  priceETB   Float? // null = base price
+  stock      Int                @default(0)
+  isActive   Boolean            @default(true)
+  sortOrder  Int                @default(0)
+  product    Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color      ProductColor?      @relation(fields: [colorId], references: [id], onDelete: SetNull)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  stockReservations StockReservation[]
+
+  @@index([productId, isActive])
+  @@index([colorId])
+}
+
+model StockReservation {
+  id        String          @id @default(cuid())
+  userId    String
+  productId String
+  variantId String?
+  colorId   String?
+  qty       Int
+  status    String          @default("Active") // Active | Consumed | Released | Expired
+  expiresAt DateTime
+  orderId   String?
+  createdAt DateTime        @default(now())
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  color     ProductColor?   @relation(fields: [colorId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([productId, status])
+  @@index([variantId, status])
+  @@index([expiresAt])
+  @@index([orderId])
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  label     String   @default("Home")
+  fullName  String
+  phone     String // +251…
+  region    String
+  city      String
+  subCity   String?
+  woreda    String
+  kebele    String?
+  landmark  String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders    Order[]
+
+  @@index([userId])
+}
+
+model ReturnRequest {
+  id            String    @id @default(cuid())
+  orderItemId   String
+  orderId       String
+  buyerId       String
+  vendorId      String?
+  reason        String // Damaged | WrongItem | NotAsDescribed | ChangedMind | Other
+  description   String
+  evidenceUrls  String? // JSON string[]
+  status        String    @default("Requested") // Requested | VendorApproved | VendorRejected | AdminReview | Approved | Rejected | Refunded
+  vendorNote    String?
+  adminDecision String?
+  adminId       String?
+  refundETB     Float?
+  createdAt     DateTime  @default(now())
+  resolvedAt    DateTime?
+  orderItem     OrderItem @relation(fields: [orderItemId], references: [id])
+  order         Order     @relation(fields: [orderId], references: [id])
+  buyer         User      @relation("BuyerReturns", fields: [buyerId], references: [id])
+  vendor        User?     @relation("VendorReturns", fields: [vendorId], references: [id])
+
+  @@index([orderId])
+  @@index([orderItemId])
+  @@index([buyerId])
+  @@index([vendorId])
+  @@index([status, createdAt])
+}
+
+model Coupon {
+  id          String             @id @default(cuid())
+  code        String             @unique
+  description String?
+  type        String // Percent | Fixed
+  value       Float // percent (10) or fixed ETB (200)
+  minSubtotal Float              @default(0)
+  maxDiscount Float?
+  maxUses     Int                @default(0) // 0 = unlimited
+  usedCount   Int                @default(0)
+  startsAt    DateTime           @default(now())
+  expiresAt   DateTime
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  redemptions CouponRedemption[]
+
+  @@index([isActive, expiresAt])
+}
+
+model CouponRedemption {
+  id          String   @id @default(cuid())
+  couponId    String
+  orderId     String
+  userId      String
+  discountETB Float
+  createdAt   DateTime @default(now())
+  coupon      Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@index([couponId])
+  @@index([userId])
+  @@index([orderId])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
+}
+
+model Banner {
+  id        String    @id @default(cuid())
+  title     String
+  imageUrl  String
+  link      String?
+  position  Int       @default(0)
+  isActive  Boolean   @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([isActive, position])
+}
+
+model Cart {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  itemsJson      String // JSON [{variantId?,colorId?,productId,qty}]
+  updatedAt      DateTime  @updatedAt
+  reminderSentAt DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model OutboundMessage {
+  id          String    @id @default(cuid())
+  userId      String?
+  channel     String // Sms | Email
+  template    String
+  destination String
+  payloadJson String?
+  provider    String    @default("Mock")
+  providerRef String?
+  status      String    @default("Queued") // Queued | Sent | Failed | Skipped
+  error       String?
+  createdAt   DateTime  @default(now())
+  sentAt      DateTime?
+  user        User?     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([channel, createdAt])
+  @@index([status])
+}
