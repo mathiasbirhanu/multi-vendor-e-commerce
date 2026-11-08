@@ -1,0 +1,9 @@
+bin/
+obj/
+logs/
+filestorage/
+.env
+*.user
+.vs/
+.idea/
+migrations/**/Designer.cs
