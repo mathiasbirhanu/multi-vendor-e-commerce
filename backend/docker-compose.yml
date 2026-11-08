@@ -1,0 +1,118 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: markethub
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d markethub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # GAP-FILL v2: typo-tolerant product search (typoTolerance ON via MeilisearchIndexer settings)
+  meilisearch:
+    image: getmeili/meilisearch:v1.8
+    environment:
+      MEILI_MASTER_KEY: ${Meilisearch__ApiKey:-markethub-dev-meili-key}
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilidata:/meili_data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7700/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # GAP-FILL v2: local SMTP catch-all — Email__Provider=Smtp + Smtp__Host=mailpit sends land here
+  mailpit:
+    image: axllent/mailpit
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web UI
+
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=markethub;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres}
+      Redis__ConnectionString: redis:6379
+      FileStorage__Provider: Local
+      FileStorage__LocalRoot: /app/filestorage
+      Payments__Provider: ${Payments__Provider:-Mock}
+      Jwt__Key: ${Jwt__Key:-dev-only-key-change-me-in-production-0123456789-0123456789-0123456789}
+      Cors__Origins: ${Cors__Origins:-http://localhost:3000}
+      # GAP-FILL v2 integrations
+      Sms__Provider: ${Sms__Provider:-Mock}
+      EthioTelecom__Endpoint: ${EthioTelecom__Endpoint:-}
+      EthioTelecom__ApiKey: ${EthioTelecom__ApiKey:-}
+      EthioTelecom__SenderId: ${EthioTelecom__SenderId:-MarketHub}
+      Safaricom__Endpoint: ${Safaricom__Endpoint:-}
+      Safaricom__ApiKey: ${Safaricom__ApiKey:-}
+      Safaricom__Shortcode: ${Safaricom__Shortcode:-MARKETHUB}
+      Email__Provider: ${Email__Provider:-Mock}
+      Smtp__Host: ${Smtp__Host:-mailpit}
+      Smtp__Port: ${Smtp__Port:-1025}
+      Smtp__User: ${Smtp__User:-}
+      Smtp__Pass: ${Smtp__Pass:-}
+      Smtp__From: ${Smtp__From:-no-reply@markethub.et}
+      Search__Provider: ${Search__Provider:-Meilisearch}
+      Meilisearch__Host: ${Meilisearch__Host:-http://meilisearch:7700}
+      Meilisearch__ApiKey: ${Meilisearch__ApiKey:-markethub-dev-meili-key}
+      Meilisearch__IndexPrefix: ${Meilisearch__IndexPrefix:-markethub}
+      Cdn__BaseUrl: ${Cdn__BaseUrl:-https://z-cdn.chatglm.cn/image-search-mcp/images-ppt}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    volumes:
+      - filestorage:/app/filestorage
+
+volumes:
+  pgdata:
+  miniodata:
+  filestorage:
+  meilidata:
