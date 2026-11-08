@@ -1,0 +1,71 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34714.143
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FA04EC1C-4F44-4A66-90AC-8E0A20ACD3E5}") = "MarketHub.Api", "src\MarketHub.Api\MarketHub.Api.csproj", "{A1000000-1111-2222-3333-000000000001}"
+EndProject
+Project("{FA04EC1C-4F44-4A66-90AC-8E0A20ACD3E5}") = "MarketHub.Shared", "src\MarketHub.Shared\MarketHub.Shared.csproj", "{A1000000-1111-2222-3333-000000000002}"
+EndProject
+Project("{FA04EC1C-4F44-4A66-90AC-8E0A20ACD3E5}") = "MarketHub.Modules.Identity", "src\Modules\MarketHub.Modules.Identity\MarketHub.Modules.Identity.csproj", "{A1000000-1111-2222-3333-000000000003}"
+EndProject
+Project("{FA04EC1C-4F44-4A66-90AC-8E0A20ACD3E5}") = "MarketHub.Modules.Catalog", "src\Modules\MarketHub.Modules.Catalog\MarketHub.Modules.Catalog.csproj", "{A1000000-1111-2222-3333-000000000004}"
+EndProject
+Project("{FA04EC1C-4F44-4A66-90AC-8E0A20ACD3E5}") = "MarketHub.Modules.Sales", "src\Modules\MarketHub.Modules.Sales\MarketHub.Modules.Sales.csproj", "{A1000000-1111-2222-3333-000000000005}"
+EndProject
+Project("{FA04EC1C-4F44-4A66-90AC-8E0A20ACD3E5}") = "MarketHub.Modules.Payments", "src\Modules\MarketHub.Modules.Payments\MarketHub.Modules.Payments.csproj", "{A1000000-1111-2222-3333-000000000006}"
+EndProject
+Project("{FA04EC1C-4F44-4A66-90AC-8E0A20ACD3E5}") = "MarketHub.Modules.Finance", "src\Modules\MarketHub.Modules.Finance\MarketHub.Modules.Finance.csproj", "{A1000000-1111-2222-3333-000000000007}"
+EndProject
+Project("{FA04EC1C-4F44-4A66-90AC-8E0A20ACD3E5}") = "MarketHub.Modules.Notifications", "src\Modules\MarketHub.Modules.Notifications\MarketHub.Modules.Notifications.csproj", "{A1000000-1111-2222-3333-000000000008}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{A1000000-1111-2222-3333-000000000090}"
+EndProject
+Project("{FA04EC1C-4F44-4A66-90AC-8E0A20ACD3E5}") = "MarketHub.Tests", "tests\MarketHub.Tests\MarketHub.Tests.csproj", "{A1000000-1111-2222-3333-000000000009}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1000000-1111-2222-3333-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000002}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000002}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000003}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000003}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000003}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000004}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000004}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000004}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000004}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000005}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000005}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000005}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000005}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000006}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000006}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000006}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000006}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000007}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000007}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000007}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000007}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000008}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000008}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000008}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000008}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000009}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000009}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1000000-1111-2222-3333-000000000009}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1000000-1111-2222-3333-000000000009}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A1000000-1111-2222-3333-000000000009} = {A1000000-1111-2222-3333-000000000090}
+	EndGlobalSection
+EndGlobal
